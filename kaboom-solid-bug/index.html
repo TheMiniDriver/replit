@@ -1,0 +1,104 @@
+<!-- <script src="https://kaboomjs.com/lib/0.5.1/kaboom.js"></script> -->
+<script type="module">
+import kaboom from "https://unpkg.com/kaboom@next/dist/kaboom.mjs";
+
+const MAP_WIDTH = 440; 
+const MAP_HEIGHT = 275; 
+const BLOCK_SIZE = 11;
+
+kaboom({
+	global: true,
+	fullscreen: false,
+    clearColor: [0, 0, 0, 1],
+    width: MAP_WIDTH,
+    height: MAP_HEIGHT,
+	scale: 2,
+    debug: true
+});
+
+loadSprite("spacefuel","img/spacefuel.png"); 
+
+scene("main", () => {
+
+    layers([
+        "bg", 
+        "obj", 
+        "ui", 
+    ], "obj"); 
+
+
+    const map = addLevel([
+        "--------------------------------------------",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                 ======                   -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "-                                          -",
+        "============================================",
+        "                                            "
+    ], {
+        width: BLOCK_SIZE,
+        height: BLOCK_SIZE,
+        pos: vec2(0, 0),
+        "=": [
+            rect(BLOCK_SIZE, BLOCK_SIZE), 
+            color(255,0,0),
+            "platform", 
+            solid()
+        ], 
+        "-": [
+            rect(BLOCK_SIZE/10, BLOCK_SIZE), 
+            color(0,0,0),
+            "wall", 
+            solid()
+        ]
+    });
+
+    function spawnSpacefuel(){
+        let xpos = rand(BLOCK_SIZE, MAP_WIDTH - BLOCK_SIZE);  
+        const fuel = add([ 
+			sprite("spacefuel"),
+			pos(xpos, BLOCK_SIZE),
+            scale(0.5), 
+            body(), 
+			"spacefuel"
+		]);
+
+        wait (1, ()=>{
+            destroy(fuel); 
+            spawnSpacefuel(); 
+        }); 
+    }
+    spawnSpacefuel(); 
+
+    action("spacefuel", (spacefuel)=>{
+        spacefuel.resolve(); 
+
+        if (spacefuel.pos.y > MAP_HEIGHT){
+            console.log("It's fallen through the floor! y:" + spacefuel.pos.y); 
+            console.log(debug.fps()); 
+        }
+    }); 
+
+}); 
+
+go("main");
+</script>

@@ -1,0 +1,459 @@
+<script src="https://kaboomjs.com/lib/0.5.1/kaboom.js"></script>
+<script type="module">
+
+
+// Game Parameters
+const MAP_WIDTH = 440; 
+const MAP_HEIGHT = 275;
+const BLOCK_SIZE = 11;  
+const BULLET_SPEED = 400;
+const ALIEN__BASE_SPEED = 100; 
+const ALIEN_SPEED_INC = 20; 
+const POINTS_PER_GEM = 100; 
+const POINTS_PER_ALIEN = 10; 
+const ALIEN_SHIELD_DAMAGE = -15; 
+const SHIELD_HEAL_RATE = 3; 
+
+// initialize kaboom context
+kaboom({
+	global: true,
+	fullscreen: false,
+    clearColor: [0, 0, 0, 1],
+    width: MAP_WIDTH,
+    height: MAP_HEIGHT,
+	scale: 2,
+});
+
+const directions = {
+  LEFT: "left", 
+  RIGHT: "right"
+}
+
+let current_direction = directions.RIGHT; 
+
+
+//loadRoot("");
+loadSprite("spaceman","img/spaceship.png");  
+loadSprite("alien","img/nokia.png"); 
+loadSprite("spacefuel","img/spacefuel.png"); 
+loadSprite("space", "img/stars.png"); 
+
+loadSound("shoot", "sounds/gun.wav");
+loadSound("explosion", "sounds/bomb.wav"); 
+loadSound("score", "sounds/point.wav"); 
+
+loadSound("music", "sounds/music.mp3"); 
+
+// define a scene
+scene("main", () => {
+
+    layers([
+        "bg", 
+        "obj", 
+        "ui", 
+    ], "obj"); 
+
+    add([
+        sprite("space"), 
+        layer("bg")
+    ])
+
+    const map = addLevel([
+        "--------------------------------------------",
+		"-                                          -",
+        "-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                ======    -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-   ======                                 -",
+		"-                                          -",
+		"-                                          -",
+		"-                 ======                   -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"-                                          -",
+		"============================================",
+        "                                            "
+	], {
+		width: BLOCK_SIZE,
+		height: BLOCK_SIZE,
+		pos: vec2(0, 0),
+		"=": [
+            rect(BLOCK_SIZE, BLOCK_SIZE), 
+			color(255,0,0),
+            "platform", 
+            solid()
+		], 
+        "-": [
+            rect(BLOCK_SIZE/10, BLOCK_SIZE), 
+			color(0,0,0),
+            "wall", 
+            solid()
+        ]
+	});
+
+    keyDown("up", () => {
+       player.jump(100); 
+	});
+
+
+    keyDown("left", () => {
+        player.flipX(-1);
+        player.angle = -0.2; 
+        current_direction = directions.LEFT; 
+        player.move(-100,0);
+    });
+
+    keyDown("right", () => {
+        player.flipX(1);
+        player.angle = -0.2; 
+        current_direction = directions.RIGHT; 
+        player.move(100,0);  
+    });
+
+    keyRelease("left", ()=>{
+        player.angle = 0; 
+    }); 
+
+    keyRelease("right", ()=>{
+        player.angle = 0; 
+    }); 
+          
+    keyPress("space", () => {
+		spawnBullet(player.pos);
+	});
+
+    const player = add([
+        sprite("spaceman"), 
+        pos(100, 200), 
+        body(), 
+        scale(1),
+        rotate(0), 
+        origin("center"),
+        "player", 
+        {
+            score : 0, 
+            shield : 100
+        }
+    ]); 
+
+    player.action(() => {
+        player.resolve();
+    });
+
+
+    /*
+        Score and Shield
+    */
+    add([
+		text("SCORE: ",8),
+		pos(100, 10),
+		origin("center"),
+		layer("ui"),
+	]);
+
+    const scoreText = add ([
+		text("000000",8),
+		pos(150, 10),
+		origin("center"),
+		layer("ui"),
+	]);
+
+    add([
+		text("SHIELD: ",8),
+		pos(300, 10),
+		origin("center"),
+		layer("ui"),
+	]);
+
+    const shieldHolder = add ([
+        rect(52,12),
+		pos(350, 10),
+        color(1,1,1),
+		origin("center"),
+		layer("ui"),
+	]);
+
+    const shieldHolderInside = add ([
+        rect(50,10),
+		pos(350, 10),
+        color(0,0,0),
+		origin("center"),
+		layer("ui"),
+	]);
+
+    const shieldBar = add ([
+        rect(50,10),
+		pos(325, 5),
+        color(0,1,0),
+		layer("ui"),
+	]);
+
+    function spawnBullet(bulletpos) {
+        if (current_direction == directions.LEFT){
+            bulletpos = bulletpos.sub(10,0); 
+        } else if (current_direction == directions.RIGHT){
+            bulletpos = bulletpos.add(10,0); 
+        }
+		add([
+			rect(6, 2),
+			pos(bulletpos),
+			origin("center"),
+			color(100, 100, 1),
+			"bullet",
+            {
+                bulletSpeed : current_direction == directions.LEFT?-1*BULLET_SPEED: BULLET_SPEED 
+            }
+		]);
+
+        play("shoot", {
+			volume: 0.2,
+			detune: rand(-1200, 1200),
+		});
+	}
+
+
+    function spawnAlien() {
+        let alienDirection = choose([directions.LEFT, directions.RIGHT]); 
+        let xpos = (alienDirection == directions.LEFT ? 0:MAP_WIDTH); 
+
+        const points_speed_up = Math.round(player.score / 1000); 
+        const alien_speed = ALIEN__BASE_SPEED + (points_speed_up * ALIEN_SPEED_INC); 
+        const new_alien_interval = 0.8 - (points_speed_up/20); 
+
+		add([
+			sprite("alien"),
+			pos(xpos, rand(0, MAP_HEIGHT-20)),
+            scale(1), 
+			"alien",
+			 {
+			 	speedX: rand(alien_speed * 0.5, alien_speed * 1.5) * (alienDirection == directions.LEFT ? 1: -1),
+                speedY: rand(alien_speed * 0.1, alien_speed * 0.5) * choose([-1,1])
+			 },
+		]);
+		wait(new_alien_interval, spawnAlien);
+	}
+
+    function spawnSpacefuel(){
+        let xpos = rand(BLOCK_SIZE, MAP_WIDTH - BLOCK_SIZE);  
+        add([ 
+			sprite("spacefuel"),
+			pos(xpos, BLOCK_SIZE),
+            scale(0.5), 
+            body(), 
+			"spacefuel"
+		]);
+    }
+    
+    action("alien", (alien) => {
+		alien.move(alien.speedX, alien.speedY);
+		if ((alien.pos.y - alien.height > MAP_HEIGHT) || (alien.pos.y < 0)) {
+			destroy(alien);
+		}
+        if ((alien.pos.x < -1 * alien.width) ||(alien.pos.x > MAP_WIDTH)) {
+			destroy(alien);
+		}
+	});
+
+    collides("alien","platform", (alien, platform) =>{
+        makeExplosion(alien.pos, 5, 3, 3);
+        destroy(alien); 
+        play("explosion", {
+			volume: 0.1,
+			detune: rand(-1200, 1200),
+		});
+    }); 
+
+    collides("alien","bullet", (alien, bullet) =>{
+        makeExplosion(alien.pos, 5, 5, 5);
+        updateScore(POINTS_PER_ALIEN); 
+        destroy(alien); 
+        destroy(bullet); 
+        play("explosion", {
+			volume: 0.2,
+			detune: rand(0, 1200),
+		}); 
+    }); 
+
+    collides("bullet","platform", (bullet, platform) =>{
+        destroy(bullet); 
+    }); 
+
+
+    overlaps("player","spacefuel", (player, spacefuel) =>{
+        destroy(spacefuel);
+        updateScore(POINTS_PER_GEM); 
+        wait(1, spawnSpacefuel); 
+    });
+
+    overlaps("alien", "player", (alien, player) =>{
+        camShake(20); 
+        makeExplosion(alien.pos, 8, 8, 8);
+        destroy(alien); 
+        play("explosion", 
+        {
+          detune: -1200, 
+          volume : 0.5
+        }); 
+        updatePlayerShield(ALIEN_SHIELD_DAMAGE); 
+    }); 
+
+    action("spacefuel", (spacefuel)=>{
+        spacefuel.resolve();
+
+        if (spacefuel.pos.y > MAP_HEIGHT) {
+            //spacefuel.pos.y = 200; 
+            destroy(spacefuel); 
+            spawnSpacefuel(); 
+        }
+
+    }); 
+
+	action("bullet", (b) => {
+		b.move(b.bulletSpeed,0);
+		// remove the bullet if it's out of the scene for performance
+		if ((b.pos.x < 0) ||(b.pos.x > MAP_WIDTH)) {
+			destroy(b);
+            
+		}
+	});
+
+    function updateScore(points){
+        player.score += points; 
+        scoreText.text = player.score.toString().padStart(6,0); 
+        play("score", {
+			volume: 0.5,
+			detune: rand(-1200, 1200),
+		});
+    }
+
+    function updatePlayerShield(shieldPoints){
+        player.shield += shieldPoints; 
+        player.shield = Math.max(player.shield, 0); 
+        player.shield = Math.min(player.shield, 100); 
+
+        shieldBar.width = 50 * (player.shield / 100);
+
+        if (player.shield < 20) shieldBar.color = rgb(255,0,0); 
+        else if (player.shield < 50) shieldBar.color = rgb(255,140,0); 
+        else shieldBar.color = rgb(0,255,0); 
+
+        if (player.shield <=0){
+            const finalScore = player.score; 
+            destroy(player); 
+            for (let i = 0; i < 500; i++) {
+                wait(0.01 *i, ()=>{
+                    makeExplosion(vec2(rand(0,MAP_WIDTH,), rand(0, MAP_HEIGHT)), 5, 10, 10); 
+                    play("explosion", {
+                        detune: rand(-1200, 1200)            
+                    });  
+                });   
+            }
+            wait(2, ()=>{
+                go("endGame", {score: finalScore}); 
+            }); 
+		}
+    }           
+
+    loop(10, () => {
+        updatePlayerShield(SHIELD_HEAL_RATE); 
+    });
+
+    function makeExplosion(p, n, rad, size) {
+		for (let i = 0; i < n; i++) {
+			wait(rand(n * 0.1), () => {
+				for (let i = 0; i < 2; i++) {
+					add([
+						pos(p.add(rand(vec2(-rad), vec2(rad)))),
+						rect(1, 1),
+						scale(1 * size, 1 * size),
+						lifespan(0.1),
+						grow(rand(48, 72) * size),
+						origin("center"),
+					]);
+				}
+			});
+		}
+	}
+
+
+
+    const music = play("music");
+    music.loop();
+    
+    spawnAlien(); 
+    spawnSpacefuel(); 
+}); 
+
+scene("endGame", ({score})=>{
+
+    add([
+		text("GAME OVER ",40),
+		pos(MAP_WIDTH / 2, MAP_HEIGHT / 3),
+		origin("center"),
+		layer("ui"),
+	]);
+
+
+
+    keyRelease("enter", ()=>{
+        go("main");
+    })
+
+}); 
+
+
+function makeExplosion(p, n, rad, size) {
+		for (let i = 0; i < n; i++) {
+			wait(rand(n * 0.1), () => {
+				for (let i = 0; i < 2; i++) {
+					add([
+						pos(p.add(rand(vec2(-rad), vec2(rad)))),
+						rect(1, 1),
+						scale(1 * size, 1 * size),
+						lifespan(0.1),
+						grow(rand(48, 72) * size),
+						origin("center"),
+					]);
+				}
+			});
+		}
+}
+
+function lifespan(time) {
+		let timer = 0;
+		return {
+			update() {
+				timer += dt();
+				if (timer >= time) {
+					destroy(this);
+				}
+			},
+		}
+}
+
+function grow(rate) {
+    return {
+        update() {
+            const n = rate * dt();
+            this.scale.x += n;
+            this.scale.y += n;
+        },
+    };
+}
+
+// start the game
+start("main");
+//start("endGame", {score:10});
+</script>

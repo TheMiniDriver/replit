@@ -1,0 +1,359 @@
+<script src="https://kaboomjs.com/lib/0.5.1/kaboom.js"></script>
+<script type="module">
+
+const SCREEN_WIDTH = 320; 
+const SCREEN_HEIGHT = 200; 
+const BLOCK_SIZE = 11;
+
+const MOVE_DELTA = 2000; 
+const ALIEN_SPEED = 200; 
+
+const BULLET_SPEED = 5;
+const BULLET_SLACK = 10; 
+
+const THRUST_DELTA = 100; 
+
+kaboom({
+	global: true,
+	fullscreen: false,
+    clearColor: [0, 0, 0, 1],
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+	scale: 3,
+    debug: true
+});
+
+loadSprite("alien","images/alien.png"); 
+loadSprite("stars","images/stars.png"); 
+loadSprite("cockpit","images/cockpit.png"); 
+
+loadSound("shoot", "sounds/gun.wav");
+
+scene("main", () => {
+
+    layers([
+    "bg",
+    "obj",
+    "ui",],
+    "obj");
+
+
+    const cockpit = add([
+        sprite("cockpit"),
+        layer("ui"), 
+        rotate(0),
+        pos(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 ),
+        origin("center"), 
+        scale(0.275)
+    ]);
+
+    const vertical_crosshair = add([
+        // width, height
+        rect(1, 10),
+        origin('center'),
+        pos(SCREEN_WIDTH/2, SCREEN_HEIGHT/2),
+        color(0, 1, 1),
+        layer("ui")
+    ]);
+
+    const horizontal_crosshair = add([
+        // width, height
+        rect(10, 1),
+        origin('center'),
+        pos(SCREEN_WIDTH/2, SCREEN_HEIGHT/2),
+        color(0, 1, 1),
+        layer("ui")
+    ]);
+
+    let aliens = []; 
+    let bullets = [];  
+
+
+    keyDown("left", () => {
+        const delta =  MOVE_DELTA * dt(); 
+        shiftAliens(delta, 0);
+        shiftStars(delta*0.01, 0);
+        camRot(0.1);
+    });
+
+    keyDown("right", () => {
+        const delta =  -1 * MOVE_DELTA * dt(); 
+        shiftAliens(delta, 0);
+        shiftStars(delta*0.01, 0);
+        camRot(-0.1);
+    });
+
+    keyRelease("left", ()=>{
+        camRot(0);
+    }); 
+
+    keyRelease("right", ()=>{
+        camRot(0);
+    }); 
+
+    keyDown("up", () => {
+        const delta =  -1 * MOVE_DELTA * dt(); 
+        shiftAliens(0, delta);
+        shiftStars(0,delta*0.01);
+    });
+
+    keyDown("down", () => {
+        const delta = MOVE_DELTA * dt();
+        shiftAliens(0, delta);
+        shiftStars(0, delta*0.01);
+    });
+
+    keyDown("space", () => {
+        spawnBullet(vec2(0, SCREEN_HEIGHT)); 
+    });
+
+    vertical_crosshair.action(()=>{
+        camPos(vertical_crosshair.pos);
+    })
+
+    function spawnBullet(bulletpos) {
+
+        const BULLET_ORIGIN_LEFT = vec2(SCREEN_WIDTH / 4, (SCREEN_HEIGHT - SCREEN_HEIGHT/3)); 
+        const BULLET_ORIGIN_RIGHT = vec2(SCREEN_WIDTH - (SCREEN_WIDTH / 4), (SCREEN_HEIGHT - SCREEN_HEIGHT/3)); 
+
+        const BULLET_VANISHING_POINT = vec2(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2); 
+
+        const M_LEFT = (BULLET_VANISHING_POINT.y - BULLET_ORIGIN_LEFT.y) / BULLET_VANISHING_POINT.x; 
+        const M_RIGHT = -1 * M_LEFT; 
+
+		bullets.push(add([
+			rect(1, 1),
+			pos(BULLET_ORIGIN_LEFT),
+			origin("center"),
+			color(1, 0, 0),
+			"bullet",
+            {
+                bulletSpeed:  BULLET_SPEED , 
+                bulletM: M_LEFT, 
+                bulletC: 200, 
+                targetPos: BULLET_VANISHING_POINT
+            }
+		]));
+
+        bullets.push(add([
+			rect(1, 1),
+			pos(BULLET_ORIGIN_RIGHT),
+			origin("center"),
+			color(1, 0, 0),
+			"bullet",
+            {
+                bulletSpeed:  -1*BULLET_SPEED, 
+                bulletM: M_RIGHT, 
+                bulletC: 0, 
+                targetPos: BULLET_VANISHING_POINT
+            }
+		]));
+
+        play("shoot", {
+			volume: 0.2,
+			detune: rand(-1200, 1200),
+		});
+	}
+    
+    action("bullet", (b) => {
+        //const M = b.bulletM; 
+       // const C = b.bulletC;  
+
+        const m = (b.pos.y - b.targetPos.y) / (b.pos.x - b.targetPos.x); 
+        const c = b.targetPos.y - m*(b.targetPos.x); 
+
+        let newX = b.pos.x + b.bulletSpeed; 
+        let newY = m * newX + c; 
+		b.pos.x = newX
+        b.pos.y = newY;
+        // Remove the bullet once it has hit the vanishing point y line
+		if ((b.pos.y < SCREEN_HEIGHT/2)) {
+			destroyBullet(b);
+		}
+	});
+
+    function moveBulletTarget(x,y){
+        x = x /10; 
+        y = y /10; 
+        bullets.forEach((bullet)=>{
+            bullet.pos.x +=x; 
+            bullet.pos.y +=y; 
+            bullet.targetPos.x +=x; 
+            bullet.targetPos.y +=y; 
+        }); 
+    }
+
+
+    function shiftAliens(x, y){
+        aliens.forEach( (alien) =>{
+            alien.xpos += x / (alien.zpos*0.01); 
+            alien.ypos += y / (alien.zpos*0.01);  
+        }); 
+    }
+
+    function spawnAlien(){
+        const x = rand(-0 , SCREEN_WIDTH); 
+        const y = rand(0 , SCREEN_HEIGHT); 
+        const halfSpeed = ALIEN_SPEED*0.5; 
+        var newAlien = add([
+            sprite("alien"), 
+            pos(x,y), 
+            scale(0.2), 
+            rotate(0),
+            {
+                xpos: Math.random() * 320 - 160, 
+                ypos: Math.random() * 200 - 100,
+                zpos: 1000, 
+                speed: ALIEN_SPEED + rand(-1* halfSpeed, halfSpeed)
+            }, 
+            "alien", "moves"
+        ]);
+        aliens.push(newAlien); 
+    }
+
+    action("alien", (alien)=>{
+        alien.zpos -= alien.speed * dt();
+        alien.scale = 2 - (alien.zpos * 0.002);
+
+        const cx = SCREEN_WIDTH / 2;   
+        const cy = SCREEN_HEIGHT / 2;
+
+        alien.pos.x  = cx + alien.xpos * (alien.zpos * 0.001);
+        alien.pos.y = cy + alien.ypos * (alien.zpos * 0.001);
+
+        if (alien.zpos < 10 ){
+            //check if the alien has hit the craft
+            var bb = {x1:10, x2:310, y1:40, y2:130}; 
+            if (alien.pos.x >= bb.x1 && alien.pos.x <= bb.x2 && alien.pos.y >= bb.y1 && alien.pos.y <= bb.y2){
+             //   camShake(20); 
+              //  makeExplosion(alien.pos, 10, 10, 10);
+            }
+            destroyAlien(alien); 
+        }
+    }); 
+
+    function destroyAlien(alien){
+        aliens = aliens.filter(a => a != alien); 
+        destroy(alien); 
+    }
+
+    function destroyBullet(bullet){
+        bullets = bullets.filter(b => b != bullet); 
+        destroy(bullet); 
+    }
+
+    loop(0.8, spawnAlien); 
+    initStars(10000); 
+
+    collides("alien","bullet", (alien, bullet) =>{
+        if (bullet.pos.y > SCREEN_HEIGHT/2 + BULLET_SLACK) return; 
+        makeExplosion(bullet.pos, 5, 5, 5);
+        destroyAlien(alien); 
+        destroyBullet(bullet);  
+    }); 
+
+    action(()=>{
+        moveStars(3); 
+
+        const cx = SCREEN_WIDTH / 2;   
+        const cy = SCREEN_HEIGHT / 2;
+
+        const count = stars.length;
+        for (var i = 0; i < count; i++) {
+            const star = stars[i];
+
+            const x = cx + star.x / (star.z * 0.001);
+            const y = cy + star.y / (star.z * 0.001);
+
+            if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) {
+            continue;
+            }
+
+            const d = star.z / 1000.0;
+            const b = 1 - d * d;
+
+            drawStar(x, y, b);
+        }
+    }); 
+
+}); 
+
+var stars = []; 
+function initStars(numberOfStars){
+    for (let i = 0; i < numberOfStars; i++) {
+        const s = {
+          x: Math.random() * SCREEN_WIDTH - (SCREEN_WIDTH * 0.5),
+          y: Math.random() * SCREEN_HEIGHT - (SCREEN_HEIGHT * 0.5),
+          z: Math.random() * 1000
+        };
+        stars.push(s);
+      }
+}
+
+function moveStars(distance){
+    const count = stars.length;
+      for (var i = 0; i < count; i++) {
+        const s = stars[i];
+        s.z -= distance;
+        while (s.z <= 1) {
+          s.z += 1000;
+        }
+      }
+}
+
+
+
+function shiftStars(x, y){
+    stars.forEach(star =>{
+        star.x +=x; 
+        star.y +=y; 
+    });
+}
+
+function drawStar(x, y, intensity){
+    drawRect(vec2(x,y), 1, 1, {
+        color: rgb(intensity, intensity, intensity)
+    }); 
+}
+
+function makeExplosion(p, n, rad, size) {
+		for (let i = 0; i < n; i++) {
+			wait(rand(n * 0.1), () => {
+				for (let i = 0; i < 2; i++) {
+					add([
+						pos(p.add(rand(vec2(-rad), vec2(rad)))),
+						rect(1, 1),
+						scale(1 * size, 1 * size),
+						lifespan(0.1),
+						grow(rand(48, 72) * size),
+						origin("center"),
+					]);
+				}
+			});
+		}
+}
+
+function lifespan(time) {
+		let timer = 0;
+		return {
+			update() {
+				timer += dt();
+				if (timer >= time) {
+					destroy(this);
+				}
+			},
+		}
+}
+
+function grow(rate) {
+    return {
+        update() {
+            const n = rate * dt();
+            this.scale.x += n;
+            this.scale.y += n;
+        },
+    };
+}
+
+start("main");
+</script>
