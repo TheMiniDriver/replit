@@ -1,5 +1,7 @@
 //import kaboom from "kaboom"
 
+
+
 // initialize context
 kaboom({
   background: [0, 0, 0],
@@ -67,11 +69,22 @@ scene("game", () => {
         alienMap[row][col] = alien;
       }
     }
-
   }
 
-  //map = addLevel(level, levelConfig);
+  function addBases() {
+    add([
+      pos(width()/3, height() - 3*BLOCK_HEIGHT),
+      rect(BLOCK_WIDTH * 3, BLOCK_HEIGHT),
+      color(0,0,200),
+      origin("center"),
+      area(),
+      solid()
+    ]);
+  }
+
+  addBases();
   spawnAliens();
+  
   onKeyDown("left", () => {
     player.move(-1 * MOVE_SPEED, 0)
   });
@@ -102,14 +115,14 @@ scene("game", () => {
     col = randi(0, ALIEN_COLS);
     let shooter = null;
 
-      // Look for the first alien in the column that is still alive
-    for (row = 4; row >= 0; row --){
+    // Look for the first alien in the column that is still alive
+    for (row = 4; row >= 0; row--) {
       shooter = alienMap[row][col];
-      if (shooter != null){
-        break; 
+      if (shooter != null) {
+        break;
       }
     }
-     debug.log(`Shooting alien at row ${row} and col ${col}`);   
+    debug.log(`Shooting alien at row ${row} and col ${col}`);
 
     if (shooter != null) {
       spawnBullet(shooter.pos, 1, "alienBullet");
