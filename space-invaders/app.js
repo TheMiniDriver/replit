@@ -1,7 +1,5 @@
 //import kaboom from "kaboom"
 
-
-
 // initialize context
 kaboom({
   background: [0, 0, 0],
@@ -13,9 +11,9 @@ kaboom({
 });
 
 
-const MOVE_SPEED = 500;
+const PLAYER_MOVE_SPEED = 500;
 const ALIEN_SPEED = 15;
-const ALIEN_STEPS = 166;
+const ALIEN_STEPS = 322;
 
 const BULLET_SPEED = 300;
 
@@ -28,7 +26,28 @@ const OFFSET_Y = 100;
 const ALIEN_ROWS = 5;
 const ALIEN_COLS = 6;
 
+const POINTS_PER_ALIEN = 10;
+
+const SCREEN_EDGE = 100;
+
+const GUN_COOLDOWN_TIME = 1;
+
+
 loadRoot("sprites/");
+loadSpriteAtlas("invaderMac.png", {
+  "alien": {
+    "x": 0,
+    "y": 0,
+    "width": 48,
+    "height": 12,
+    "sliceX": 4,
+    "sliceY": 1,
+    "anims": {
+      "fly": { from: 0, to: 1, speed: 4, loop: true },
+      "explode": { from: 2, to: 3, speed: 8, loop: true }
+    }
+  }
+});
 
 loadSprite("player", "player.png");
 loadSprite("greenAlien", "green.png");
@@ -44,7 +63,12 @@ scene("game", () => {
     scale(1),
     origin("center"),
     pos(50, 550),
-    area()
+    area(),
+    {
+      score: 0,
+      lives: 3,
+    },
+    "player"
   ]);
 
   let alienMap = [];
@@ -57,8 +81,9 @@ scene("game", () => {
         const y = (row * BLOCK_HEIGHT) + OFFSET_Y;
         const alien = add([
           pos(x, y),
-          sprite("greenAlien"),
+          sprite("alien"),
           area(),
+          scale(4),
           origin("center"),
           "alien",
           {
@@ -66,6 +91,7 @@ scene("game", () => {
             col: col
           }
         ]);
+        alien.play("fly");
         alienMap[row][col] = alien;
       }
     }
@@ -73,28 +99,76 @@ scene("game", () => {
 
   function addBases() {
     add([
-      pos(width()/3, height() - 3*BLOCK_HEIGHT),
+      pos(width() / 3, height() - 3 * BLOCK_HEIGHT),
       rect(BLOCK_WIDTH * 3, BLOCK_HEIGHT),
-      color(0,0,200),
+      color(0, 0, 200),
       origin("center"),
       area(),
       solid()
     ]);
   }
 
-  addBases();
+  //addBases();
   spawnAliens();
-  
+
+  add([
+    text("SCORE:", { size: 20, font: "sink" }),
+    pos(100, 40),
+    origin("center"),
+    layer("ui"),
+  ]);
+
+  const scoreText = add([
+    text("000000", { size: 20, font: "sink" }),
+    pos(200, 40),
+    origin("center"),
+    layer("ui"),
+  ]);
+
+
+  add([
+    text("LIVES:", { size: 20, font: "sink" }),
+    pos(650, 40),
+    origin("center"),
+    layer("ui"),
+  ]);
+
+  const livesText = add([
+    text("3", { size: 20, font: "sink" }),
+    pos(700, 40),
+    origin("center"),
+    layer("ui"),
+  ]);
+
+  function updateScore(points) {
+    player.score += points;
+    scoreText.text = player.score.toString().padStart(6, "0");
+  }
+
+  function updateLives(life) {
+    player.lives += life;
+    livesText.text = player.lives.toString();
+  }
+
   onKeyDown("left", () => {
-    player.move(-1 * MOVE_SPEED, 0)
+    if (player.pos.x >= SCREEN_EDGE) {
+      player.move(-1 * PLAYER_MOVE_SPEED, 0)
+    }
   });
 
   onKeyDown("right", () => {
-    player.move(MOVE_SPEED, 0)
+    if (player.pos.x <= width() - SCREEN_EDGE) {
+      player.move(PLAYER_MOVE_SPEED, 0)
+    }
   });
 
+  let lastShootTime = time();
   onKeyPress("space", () => {
-    spawnBullet(player.pos, -1, "bullet");
+    console.log(time());
+    if (time() - lastShootTime > GUN_COOLDOWN_TIME) {
+      lastShootTime = time();
+      spawnBullet(player.pos, -1, "bullet");
+    }
   })
 
   onUpdate("missile", (bullet) => {
@@ -103,11 +177,18 @@ scene("game", () => {
 
   onCollide("bullet", "alien", (bullet, alien) => {
     destroy(bullet);
-    destroy(alien);
+    alien.play('explode');
+    alien.use(lifespan(0.5, { fade: 0.1 }));
     alienMap[alien.row][alien.col] = null; // Mark the alien as dead
+    updateScore(POINTS_PER_ALIEN);
   });
 
-  loop(0.5, () => {
+  player.onCollide("missile", (missile) => {
+    destroy(missile);
+    updateLives(-1);
+  });
+
+  loop(1, () => {
     // Randomly choose a column, then walk up from the
     // bottom row until an alien that is still alive is found
 
@@ -122,8 +203,6 @@ scene("game", () => {
         break;
       }
     }
-    debug.log(`Shooting alien at row ${row} and col ${col}`);
-
     if (shooter != null) {
       spawnBullet(shooter.pos, 1, "alienBullet");
     }
