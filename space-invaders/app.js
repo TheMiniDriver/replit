@@ -33,8 +33,9 @@ const SCREEN_EDGE = 100;
 const GUN_COOLDOWN_TIME = 1;
 
 
+
 loadRoot("sprites/");
-loadSpriteAtlas("invaderMac.png", {
+loadSpriteAtlas("alien-sprite.png", {
   "alien": {
     "x": 0,
     "y": 0,
@@ -49,14 +50,24 @@ loadSpriteAtlas("invaderMac.png", {
   }
 });
 
-loadSprite("player", "player.png");
-loadSprite("greenAlien", "green.png");
-loadSprite("redAlien", "red.png");
-loadSprite("yellowAlien", "yellow.png");
-loadSprite("bossAlien", "extra.png");
+loadSpriteAtlas("player-sprite.png",{
+  "player": {
+    "x": 0,
+    "y": 0,
+    "width": 180,
+    "height": 30,
+    "sliceX": 3,
+    "sliceY": 1,
+    "anims": {
+      "move": { from: 0, to: 0, speed: 4, loop: false },
+      "explode": { from: 1, to: 2, speed: 8, loop: true }
+    }
+  }
+});
 
 
 scene("game", () => {
+  let pause = false;
 
   const player = add([
     sprite("player"),
@@ -70,6 +81,7 @@ scene("game", () => {
     },
     "player"
   ]);
+  player.play('move');
 
   let alienMap = [];
   function spawnAliens() {
@@ -97,18 +109,6 @@ scene("game", () => {
     }
   }
 
-  function addBases() {
-    add([
-      pos(width() / 3, height() - 3 * BLOCK_HEIGHT),
-      rect(BLOCK_WIDTH * 3, BLOCK_HEIGHT),
-      color(0, 0, 200),
-      origin("center"),
-      area(),
-      solid()
-    ]);
-  }
-
-  //addBases();
   spawnAliens();
 
   add([
@@ -151,12 +151,14 @@ scene("game", () => {
   }
 
   onKeyDown("left", () => {
+    if (pause) return; 
     if (player.pos.x >= SCREEN_EDGE) {
       player.move(-1 * PLAYER_MOVE_SPEED, 0)
     }
   });
 
   onKeyDown("right", () => {
+    if (pause) return; 
     if (player.pos.x <= width() - SCREEN_EDGE) {
       player.move(PLAYER_MOVE_SPEED, 0)
     }
@@ -164,15 +166,16 @@ scene("game", () => {
 
   let lastShootTime = time();
   onKeyPress("space", () => {
-    console.log(time());
+    if (pause) return; 
     if (time() - lastShootTime > GUN_COOLDOWN_TIME) {
       lastShootTime = time();
       spawnBullet(player.pos, -1, "bullet");
     }
   })
 
-  onUpdate("missile", (bullet) => {
-    bullet.move(0, BULLET_SPEED * bullet.direction);
+  onUpdate("missile", (missile) => {
+    if (pause) return; 
+    missile.move(0, BULLET_SPEED * missile.direction);
   });
 
   onCollide("bullet", "alien", (bullet, alien) => {
@@ -183,12 +186,29 @@ scene("game", () => {
     updateScore(POINTS_PER_ALIEN);
   });
 
-  player.onCollide("missile", (missile) => {
-    destroy(missile);
+  player.onCollide("alienBullet", (missile) => {
+    if (pause) return; 
+    destroyAll("missile");
+    player.play('explode');
     updateLives(-1);
+    pause = true; 
+    wait(2, () => {
+      if (player.lives == 0){
+        go("gameOver", player.score);
+      }
+      else {
+        player.moveTo(50, 550);
+        player.play('move');
+        pause = false;
+      }
+    });
   });
 
+
+  // Find a random alien to make shoot
   loop(1, () => {
+
+    if (pause) return; 
     // Randomly choose a column, then walk up from the
     // bottom row until an alien that is still alive is found
 
@@ -227,8 +247,9 @@ scene("game", () => {
 
   let alienDirection = 1;
   let alienMoveCounter = 0;
-
+  let alienRowsMoved = 0; 
   onUpdate(() => {
+    if (pause) return; 
     every("alien", (alien) => {
       alien.move(alienDirection * ALIEN_SPEED, 0);
     });
@@ -239,15 +260,46 @@ scene("game", () => {
       alienMoveCounter = 0;
       moveAliensDown();
     }
+
+    if (alienRowsMoved > 7) {
+      pause = true; 
+      player.play('explode');
+      wait(2, () => {
+        go("gameOver", player.score);
+      });
+    }
   });
 
   function moveAliensDown() {
+    alienRowsMoved ++; 
     every("alien", (alien) => {
-      alien.moveTo(alien.pos.x, alien.pos.y + BLOCK_HEIGHT, 500);
+      alien.moveBy(0, BLOCK_HEIGHT);
     });
   }
 
 });
 
+scene("gameOver", (score) => {
+
+  add([
+    text("GAME OVER", { size: 40, font: "sink" }),
+    pos(width() / 2, height() / 2),
+    origin("center"),
+    layer("ui"),
+  ]);
+
+  add([
+    text("SCORE: " + score, { size: 20, font: "sink" }),
+    pos(width() / 2, height() / 2 + 50),
+    origin("center"),
+    layer("ui"),
+  ])
+
+  onKeyPress("space", () => {
+    go("game");
+  });
+
+});
 
 go("game");
+
