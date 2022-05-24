@@ -7,7 +7,6 @@ kaboom({
   height: 600,
   scale: 1,
   debug: true
-
 });
 
 

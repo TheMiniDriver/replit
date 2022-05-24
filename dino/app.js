@@ -17,23 +17,54 @@ const SPEED_INCREASE = 0.5;
 
 
 loadRoot("sprites/");
+const LEVEL = [
+"------------------------------------------"
+]; 
+
+const levelConf = {
+  // grid size
+  width: 16,
+  height: 16,
+  pos: vec2(0, 600),
+  // define each object as a list of components
+  "-": () => [
+    rect(16,16),
+    color(0,255,0),
+    area(),
+    solid(),
+    origin("bot"),
+    "ground"
+  ],
+};
 
 scene("game", () => {
   let pause = false;
 
+  const level = addLevel(LEVEL, levelConf);
+  
   const player = add([
-    sprite("player"),
+    rect( 50, 50),
+    color(255,0,0),
     scale(1),
     origin("center"),
     pos(50, 550),
     area(),
+    body(),
     {
       score: 0,
       lives: 3,
     },
     "player"
   ]);
-  player.play('move');
+
+  const hurdle = add([
+    rect(10, 50),
+    color(0,0,255),
+    origin("center"),
+    pos(700,550),
+    area(),
+    "hurdle"
+  ])
 
 
   add([
@@ -57,22 +88,8 @@ scene("game", () => {
     scoreText.text = player.score.toString().padStart(6, "0");
   }
 
-
-  onKeyDown("left", () => {
-    if (pause) return; 
-    if (player.pos.x >= SCREEN_EDGE) {
-      player.move(-1 * PLAYER_MOVE_SPEED, 0)
-    }
-  });
-
-  onKeyDown("right", () => {
-    if (pause) return; 
-    if (player.pos.x <= width() - SCREEN_EDGE) {
-      player.move(PLAYER_MOVE_SPEED, 0)
-    }
-  });
-
   onKeyPress("space", () => {
+    player.jump();
     // jump
   })
 
@@ -82,6 +99,10 @@ scene("game", () => {
 
   onUpdate(() => {
     // scroll
+    every("hurdle", (hurdle) => {
+      hurdle.move(-PLAYER_MOVE_SPEED,0);
+    }); 
+
   });
 
 
