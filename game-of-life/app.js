@@ -11,8 +11,8 @@ kaboom({
 
 
 
-const MATRIX_SIZE = 64;
-const CELL_SIZE = 10;
+const MATRIX_SIZE = 128;
+const CELL_SIZE = 5;
 
 // creates an array of arrays to represent the game of life matrix.
 function createMatrix() {

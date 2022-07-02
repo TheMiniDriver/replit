@@ -4,20 +4,20 @@ Conway's Game of Life was invented back in 1970 by John Conway. He called it a Z
 
 The Game of Life is played on a grid of cells. Each cell has a state of either alive or dead. A set of rules is applied on each generation to determine the next state of the cells. These rules are:
 
-1. If a cell is alive and has less than two live neighbours, it dies.
-1. If a cell is alive and has more than three live neighbours, it dies.
-1. If a cell is alive and has two or three live neighbours, it lives on to the next generation.
-1. If a cell is dead and has exactly three live neighbours, it becomes a live cell.
+1. If a cell is alive and has less than two live neighbors, it dies.
+1. If a cell is alive and has more than three live neighbors, it dies.
+1. If a cell is alive and has two or three live neighbors, it lives on to the next generation.
+1. If a cell is dead and has exactly three live neighbors, it becomes a live cell.
 
 John Conway spent about 18 months of his coffee breaks tweaking the rules for the game, to come up with the rule set that made the most interesting patterns and properties. He didn't build it for a computer initially. He first played it using a Go board, updating the game manually.
 
-The interesting thing about Game of Life, is that despite its simple rules, it can create amazingly complex and interesting patterns, and even 'lifeforms' and machines. It's pretty cool to set some patterns, and then watch how they evolve.
+The interesting thing about Game of Life is that despite its simple rules it can create amazingly complex and interesting patterns, and even 'lifeforms' and machines. It's pretty cool to set some patterns, and then watch how they evolve.
 
-In this tutorial, we'll build the Game of Life using Javascript and Kaboom.
+In this tutorial, we'll build the Game of Life using JavaScript and Kaboom.
 
 ## Getting started in replit
 
-Head over to replit and create a new repl, using "Kaboom" as the template. Name it something like "Space Invaders", and click "Create".
+Head over to Replit and create a new repl, using "Kaboom" as the template. Name it something like "Space Invaders", and click "Create".
 
 After the repl has booted up, you should see a `main.js` file under the "Scenes" section. This is where we'll start coding. It already has some code in, but we'll replace that.
 
@@ -42,9 +42,9 @@ We initialize the Kaboom drawing context with a black background (`[0, 0, 0]`), 
 
 ## Designing the model
 
-Game of life is played on a 2D grid, or matrix. Each cell has a state of either alive or dead. Let's think of how to model this in code.
+Game of life is played on a two-dimensional grid, or matrix. Each cell has a state of either alive or dead. Let's think of how to model this in code.
 
-Since we only need to have 2 states per cell, we can use a boolean value to represent the state of these 4 cells:
+Since we only need to have two states per cell, we can use a boolean value to represent the state of these 4 cells:
 
 ![4 cells in a row](small-row.png)
 
@@ -57,9 +57,9 @@ let cell4 = true;
 
 Declaring each cell gets tedious really fast, and it's also difficult to loop through the cells when we want to update the model.
 
-Javascript has a concept of an [array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array). This is a one dimensional construct, like a list of values. We could use an array to model each row in the grid. Each element of the array would be a boolean value, `true` if the cell is alive, and `false` if it is dead.
+JavaScript has a concept of an [array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array). This is a one dimensional construct, like a list of values. We could use an array to model each row in the grid. Each element of the array would be a boolean value, `true` if the cell is alive, and `false` if it is dead.
 
-So, this row could be represented in a Javascript array as:
+So, this row could be represented in a JavaScript array as:
 
 ![a row of cells](grid-row.png)
 
@@ -82,7 +82,7 @@ let row4 = [true, false, true, false, true];
 
 This is OK, but it would be nicer to have all the rows in a single construct, so we can manipulate and query it easier.
 
-One solution is to use the array contruct again. An array doesn't just need to be a list of single values, it can also be a list of arrays. So we can make an array for the grid, and each of its elements would be the row arrays:
+One solution is to use the array construct again. An array doesn't just need to be a list of single values, it can also be a list of arrays. So we can make an array for the grid, and each of its elements would be the row arrays:
 
 ```javascript
 let grid = [
@@ -126,7 +126,7 @@ function createMatrix() {
 }
 ```
 
-Note that we use the array constructor by calling `new Array(MATRIX_SIZE)` to create each array. The first call to the constructor creates the "outer" array, and then we use a [for loop](link) to repeatedly create the "inner", or row, arrays. To set the value of each cell in the row, we use the `fill` method on the row arrays. This method takes a single value, and sets all the values in the array to that value. We set all the values to `false`, or dead, to start.
+Note that we use the array constructor by calling `new Array(MATRIX_SIZE)` to create each array. The first call to the constructor creates the "outer" array, and then we use a [for loop](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for) to repeatedly create the "inner", or row, arrays. To set the value of each cell in the row, we use the `fill` method on the row arrays. This method takes a single value, and sets all the values in the array to that value. We set all the values to `false`, or dead, to start.
 
 In the game of life rules, there are multiple reference to 'neighbor' cells. Neighbors are any cells that touch a particular cell. For example, for the blue cell below, all the red cells are neighbors.
 
@@ -138,11 +138,11 @@ Notice how each neighbor cell is 1 row or column away from the cell we are looki
 
 Recall that we can reference any cell in our matrix structure using the notation `matrix[row_number][column_number]`. So, noting that every neighbor is 1 position away, we can add or subtract 1 from the row and column numbers to find the neighbors. A few examples:
 
-- The immediate left neighbour would be: `matrix[row_number][column_number - 1]`
-- The immediate right neighbour would be: `matrix[row_number][column_number + 1]`
-- The immediate top neighbour would be: `matrix[row_number - 1][column_number]`
-- The immediate bottom neighbour would be: `matrix[row_number + 1][column_number]`
-- The immediate top left neighbour would be: `matrix[row_number - 1][column_number - 1]`
+- The immediate left neighbor would be: `matrix[row_number][column_number - 1]`
+- The immediate right neighbor would be: `matrix[row_number][column_number + 1]`
+- The immediate top neighbor would be: `matrix[row_number - 1][column_number]`
+- The immediate bottom neighbor would be: `matrix[row_number + 1][column_number]`
+- The immediate top left neighbor would be: `matrix[row_number - 1][column_number - 1]`
 
 So, if we have the target cell coordinates, `x` and `y`, we can use the following code to find the number of neighbors:
 
@@ -175,7 +175,7 @@ function neighbors(matrix, x, y) {
 }
 ```
 
-Notice that we use for loops to sweep from -1 to 1, which represents left to right and up to down. We use a conditional to check if the current cell is the target cell. We know it's the target cell if both of the sweep values are 0. If it is, we don't count it as a neighbor. We also check if the current cell is outside the grid (`<0 || >=MATRIX_SIZE`), in which case we don't count it as a neighbor. Finally, if we have a valid neighbor cell, we check if it is alive, by testing if its value is `true`. If it is, we increment the count of "living" neighbors.
+Notice that we use for loops to sweep from -1 to 1, which represents left to right and up to down. We use a conditional to check if the current cell is the target cell. We know it's the target cell if both of the sweep values are 0. If it is, we don't count it as a neighbor. We also check if the current cell is outside the grid (`<0 || >=sMATRIX_SIZE`), in which case we don't count it as a neighbor. Finally, if we have a valid neighbor cell, we check if it is alive, by testing if its value is `true`. If it is, we increment the count of "living" neighbors.
 
 ## Implementing the rules
 
@@ -183,14 +183,14 @@ Now that we have a representation, and a way to query the model for the number o
 
 Recall that the rules of the game of life are:
 
-1. If a cell is alive and has less than two live neighbours, it dies.
-1. If a cell is alive and has more than three live neighbours, it dies.
-1. If a cell is alive and has two or three live neighbours, it lives on to the next generation.
-1. If a cell is dead and has exactly three live neighbours, it becomes a live cell.
+1. If a cell is alive and has less than two live neighbors, it dies.
+1. If a cell is alive and has more than three live neighbors, it dies.
+1. If a cell is alive and has two or three live neighbors, it lives on to the next generation.
+1. If a cell is dead and has exactly three live neighbors, it becomes a live cell.
 
 The rules are applied each _generation_ across all cells in the matrix. To avoid having a partially updated matrix, and cells in the next generation that are not yet updated, we can create a new, blank matrix. Then we can iterate over each cell in the current generation's matrix, apply the rules to each cell, and set the value of the cell in the next generation's matrix to the result of the rules.
 
-Let's start with some pseudocode to find the outline of this strategy.
+Let's start with some pseudo-code to find the outline of this strategy.
 
 ```javascript
 
@@ -213,7 +213,7 @@ for each row in matrix
 return nextMatrix
 ```
 
-Translating to Javascript, and using our matrix functions, we can write the following function:
+Translating to JavaScript, and using our matrix functions, we can write the following function:
 
 ```javascript
 function nextGeneration(matrix) {
@@ -248,16 +248,18 @@ function nextGeneration(matrix) {
 
 We have a model, and we have the rules. We now need a way to regularly update the model with the rules to create one generation of the simulation after the other. 
 
-- [`onUpdate`](link)
-- [`onDraw`](link)
+Kaboom has 2 key events to help us with this:
 
-These two event handlers are called every frame of the game. The `onUpdate` function is called every frame, and the `onDraw` function is called directly after the `onUpdate` function.
+- [`onUpdate`](https://kaboomjs.com/#onUpdate)
+- [`onDraw`](https://kaboomjs.com/#onDraw)
+
+These two event handlers are called every frame of the game. The `onUpdate` event is called first, and the `onDraw` event second. Drawing to the screen can only happen in the `onDraw` event handler.
 
 This gives us the opportunity to create a new generation using `onUpdate`, and then draw this update to the screen using `onDraw`.
 
 A new frame is typically created 60 times per second, normally expressed as 60 frames per second(fps). This means that we can create a new generation every 16.67 milliseconds (1s/60fps = 16.67 milliseconds). At times, we might want to slow this down to see the patterns evolving while we watch. To control the interval between each generation, we can measure the time between updates and only create a new generation if the time between updates is greater than a pre-set threshold.
 
-With Kaboom, all drawing and controls and event handlers must be contained within a [`scene`](link). We only need one scene for our game. Let's create a scene called `game`, containing the core `onUpdate` function, and some of the variables the game will need.
+With Kaboom, all drawing and controls and event handlers must be contained within a [`scene`](https://kaboomjs.com/#scene). We only need one scene for our game. Let's create a scene called `game`, containing the core `onUpdate` function, and some of the variables the game will need.
 
 ```javascript
 scene("game", () => {
@@ -295,11 +297,11 @@ We've created a new scene called "game" here. In the code for the scene, we have
 - `timeFromLastUpdate`, an accumulator tracking the time in seconds since the last generation was updated
 - `matrix`, the model of the current generation
 
-Following these variables, we have a handler for the [`onUpdate`](link) event. Kaboom calls this handler up to 60 times per second. 
+Following these variables, we have a handler for the [`onUpdate`](https://kaboomjs.com/#onUpdate) event. Kaboom calls this handler up to 60 times per second. 
 
-First up in our hander, we check if the game is paused. If so, we just return immediately without making any changes. 
+First up in our handler function, we check if the game is paused. If so, we just return immediately without making any changes. 
 
-Then we add the time from the last update handler call to our `timeFromLastUpdate` accumulator. Kaboom has a helpful function [`dt`](link), which returns the time since the `onUpdate` method was last called. We then check this accumulated against our set `updateInterval` time to see if we should update the game and create a new generation. If the accumulated time in `timeFromLastUpdate` is less than this `updateInterval`, we leave early again, until enough time has elapsed from the last generation update. 
+Then we add the time from the last update handler call to our `timeFromLastUpdate` accumulator. Kaboom has a helpful function [`dt`](https://kaboomjs.com/#dt), which returns the time since the `onUpdate` method was last called. We then check this accumulated against our set `updateInterval` time to see if we should update the game and create a new generation. If the accumulated time in `timeFromLastUpdate` is less than this `updateInterval`, we leave early again, until enough time has elapsed from the last generation update. 
 
 If it is time to update to the next generation, we first reset the `timeFromLastUpdate` accumulator to 0. Then we update our generation counter, and replace the current generation matrix with next generation calculated by the `updateWorld` we created earlier. 
 
@@ -361,7 +363,7 @@ onDraw(()=>{
 })
 ```
 
-This update to the `onDraw` handler sets the text of the text labels to the variable values at that frame. Notice we use the Javascript [backtick](link) for strings. This enables us to insert calculation and code directly into the strings using the `${}` placeholder notation. 
+This update to the `onDraw` handler sets the text of the text labels to the variable values at that frame. Notice we use the JavaScript [template literal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals) for strings. This enables us to insert calculation and code directly into the strings using the `${}` placeholder notation. 
 
 Now, lets draw each of the cells in the matrix. We'll create a helper function for this. Add the following code to the `game` scene:
 
@@ -379,7 +381,7 @@ function drawCell(row, col) {
 }
 ```
 
-This function draws the cell at the given `row` and `col` of our matrix model. The function `drawRect` is a Kaboom function that draws a rectangle to the canvas. We use the constant `CELL_SIZE` to determine the width and height of each cell in pixels. The position on the canvas is set by mutiplying the row and height by the cell size, using the `vec2` structure. A [`vec2`](link) is Kaboom's two-dimensional vector. Tthe color is set to a classic blueish color (google "Cornflower blue"). We use the `fill` property to instruct Kaboom to fill the whole rectangle with the color.
+This function draws the cell at the given `row` and `col` of our matrix model. The function `drawRect` is a Kaboom function that draws a rectangle to the canvas. We use the constant `CELL_SIZE` to determine the width and height of each cell in pixels. The position on the canvas is set by mutiplying the row and height by the cell size, using the `vec2` structure. A [`vec2`](https://kaboomjs.com/#vec2) is Kaboom's two-dimensional vector. The color is set to a classic blueish color (google "Cornflower blue"). We use the `fill` property to instruct Kaboom to fill the whole rectangle with the color.
 
 We need one other helper function to draw the grid over the cells, so we can more easily see individual cells. Add the following code to the `game` scene:
 
@@ -403,7 +405,7 @@ function drawGridLines() {
 }
 ```
 
-This uses the Kaboom [`drawLine`](link) function to draw the grid lines. We set up a loop to draw `MATRIX_SIZE` number of lines vertically and horizontally. The first `drawLine` call draws the vertical lines, and the second the horizontal lines. `p1` and `p2` represent the start and end points for each line, expressed as a two-dimensional vector [`vec2`](link). The `width` property sets the width of the line, and the `color` property sets the color of the line.
+This uses the Kaboom [`drawLine`](https://kaboomjs.com/#drawLine) function to draw the grid lines. We set up a loop to draw `MATRIX_SIZE` number of lines vertically and horizontally. The first `drawLine` call draws the vertical lines, and the second the horizontal lines. `p1` and `p2` represent the start and end points for each line, expressed as a two-dimensional vector [`vec2`](https://kaboomjs.com/#vec2). The `width` property sets the width of the line, and the `color` property sets the color of the line.
 
 Now we can place and draw a cell on the screen, let's go back to the `onDraw` handler to loop through the matrix and call out to the `drawCell` and `drawGridLines` functions. Update the `onDraw` handler like this:
 
@@ -430,7 +432,7 @@ Here we added looping through all rows and columns to get each cell. If the cell
 
 ### Setting / clearing a cell
 
-We can draw the game, but we need some way to set the starting patterns. We can use the mouse to click on cells to set them alive or dead. Kaboom has the function [`onMousePress`](link) which lets us attach a handler whenever the mouse buttons are clicked. We can also filter depending if the left or right buttons are clicked. Add the following code to the `game` scene:
+We can draw the game, but we need some way to set the starting patterns. We can use the mouse to click on cells to set them alive or dead. Kaboom has the function [`onMousePress`](https://kaboomjs.com/#onMousePress) which lets us attach a handler whenever the mouse buttons are clicked. We can also filter depending if the left or right buttons are clicked. Add the following code to the `game` scene:
 
 ```javascript
   onMousePress("left", (pos) => {
@@ -461,7 +463,7 @@ Great, now we can set cells!
 
 No we can model the game, see it, and set states. Let's add a control to start and pause the simulation. 
 
-We can use Kaboom's [`onKeyPress`](link) function to attach a handler whenever a key is pressed. Add the following code to the `game` scene:
+We can use Kaboom's [`onKeyPress`](https://kaboomjs.com/#onKeyPress) function to attach a handler whenever a key is pressed. Add the following code to the `game` scene:
 
 ```javascript
   onKeyPress("space", () => {
@@ -486,11 +488,11 @@ We might want too speed up or slow down the simulation. We'll use the up and dow
   });
 ```
 
-Here we either add or subtract 0.01 seconds to the interval. Note that in the `up` key hander, which makes the interval between updates shorter, therefore increasing the speed of the simulation, we make sure that our interval cannot go negative. A negative time iinterval would make no sense, unless we accidentally invent time travel. 
+Here we either add or subtract 0.01 seconds to the interval. Note that in the `up` key handler, which makes the interval between updates shorter, therefore increasing the speed of the simulation, we make sure that our interval cannot go negative. A negative time interval would make no sense, unless we accidentally invent time travel. 
 
 ### Resetting the game
 
-The last control we need to add in is one to completely reset the simulation, clearing out all cells if we want to start fresh. We'll listen for the `r` for reset, key being pressed. If it is pressed, we'll create a new blank matrix, and resest the generation counter. Add the following the the `game` scene:
+The last control we need to add in is one to completely reset the simulation, clearing out all cells if we want to start fresh. We'll listen for the `r` for reset, key being pressed. If it is pressed, we'll create a new blank matrix, and reset the generation counter. Add the following the the `game` scene:
 
 ```js
   onKeyPress("r", () => {
@@ -509,7 +511,7 @@ Let's start of with some basic patterns that oscillate between a 2 or more state
 
 After you enter them, press the space bar to start the simulation. You should see something like this:
 
-![oscillators](oscillators.png)
+![oscillators](oscillators.gif)
 
 Try using the up and down arrow keys to speed up or slow down the simulation.
 
@@ -540,10 +542,17 @@ It looks a bit like a wild fireworks show when it runs:
 
 ![die hard show](die-hard.gif)
 
+There are also patterns that can create other patterns. These type of patterns are known as *guns*. Here is Gosper's glider gun, the first that was discovered. It creates gliders. Try this pattern out:
+
+![glider gun starting pattern](glider-gun-start.png)s
+
+When you run it, you should see it emit gliders! Guns are some of the coolest patterns you can create.
+
+![glider gun](glider-gun.gif)
 
 ## Next steps
 
-Congratulations on building a simulation game! There are many, many patterns that have been discovered for Conway's Game of Life, and still being discovered today. Perhaps you could discover some! Take at look the [wikipedia article](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) for more info on Conway's game of life, and some patterns. 
+Congratulations on building a simulation game! There are many, many patterns that have been discovered for Conway's Game of Life, and still being discovered today. Perhaps you could discover some! Take at look the [Wikipedia article](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) for more info on Conway's game of life, and some patterns. The game of life even has it's [own wiki at https://conwaylife.com](https://conwaylife.com).
 
 Also try google searching for "Conway game of life patterns". There is a myriad of sites out there listing patterns to try. 
 

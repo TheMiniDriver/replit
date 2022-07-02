@@ -102,7 +102,7 @@ scene("game", () => {
     every("hurdle", (hurdle) => {
       hurdle.move(-PLAYER_MOVE_SPEED,0);
     }); 
-
+    
   });
 
 
